@@ -11,6 +11,10 @@ class CPP_TEST_API ABullet : public AActor
 {
 	GENERATED_BODY()
 	
+protected:
+	FTimerHandle lifeTimeID;
+	void DestroyBullet();
+	virtual void BeginPlay() override;
 public:	
 	// Sets default values for this actor's properties
 	ABullet();
@@ -23,5 +27,8 @@ public:
 	float damage = 10;
 
 	virtual void Tick(float DeltaTime) override;
+
+	UPROPERTY(EditAnywhere)
+	float lifetime;
 
 };

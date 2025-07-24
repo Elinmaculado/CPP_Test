@@ -11,4 +11,7 @@ UCLASS()
 class CPP_TEST_API AGMB : public AGameModeBase
 {
 	GENERATED_BODY()
+
+public:
+	int score = 0;
 };

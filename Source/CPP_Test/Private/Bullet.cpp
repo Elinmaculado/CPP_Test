@@ -11,12 +11,23 @@ ABullet::ABullet()
 
 }
 
+// Called when the game starts or when spawned
+void ABullet::BeginPlay()
+{
+	Super::BeginPlay();
+	GetWorldTimerManager().SetTimer(lifeTimeID, this, &ABullet::DestroyBullet, lifetime);
+}
+
+
 // Called every frame
 void ABullet::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	AddActorLocalOffset(FVector(speed, 0, 0));
+
 }
 
-
+void ABullet::DestroyBullet() {
+	Destroy();
+}
 
