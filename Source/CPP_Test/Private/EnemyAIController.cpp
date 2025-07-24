@@ -11,7 +11,7 @@
 
 AEnemyAIController::AEnemyAIController(FObjectInitializer const& ObjectInitializer)
 {
-	
+	SetupPerceptionSystem();
 }
 
 void AEnemyAIController::OnPossess(APawn* NewPawn)
