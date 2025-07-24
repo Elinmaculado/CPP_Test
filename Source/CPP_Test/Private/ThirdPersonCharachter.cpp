@@ -4,6 +4,8 @@
 #include "ThirdPersonCharachter.h"
 
 #include "HealthComponent.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
 
 AThirdPersonCharachter::AThirdPersonCharachter()
 {
@@ -106,6 +108,16 @@ void AThirdPersonCharachter::OnAttackEnded(UAnimMontage* Montage, bool bInterrup
 {
 	if (Montage == attackMontage) {
 		isAttacking = false;
+	}
+}
+
+void AThirdPersonCharachter::SetupStimulusSource()
+{
+	StimulusSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("Stimulus"));
+	if (StimulusSource)
+	{
+		StimulusSource->RegisterForSense(TSubclassOf<UAISense_Sight>());
+		StimulusSource->RegisterWithPerceptionSystem();
 	}
 }
 

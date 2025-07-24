@@ -53,5 +53,9 @@ public:
 
 	FTimerHandle AttackResetHandle;
 
+	private:
+	class UAIPerceptionStimuliSourceComponent* StimulusSource;
+	void SetupStimulusSource();
+	
 	void ResetAttackState();
 };
