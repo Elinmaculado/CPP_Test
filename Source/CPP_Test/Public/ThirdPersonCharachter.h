@@ -42,6 +42,14 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* swordMesh;
 
+	// Mesh del cuchillo
+	UPROPERTY(VisibleAnywhere)
+	class UStaticMeshComponent* knifeMesh;
+
+	// Bandera para saber qué arma está activa
+	UPROPERTY(EditAnywhere, Category="Combat")
+	bool bUsingSword = true;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	UAnimMontage* attackMontage;
 	UPROPERTY(BlueprintReadWrite)
@@ -63,5 +71,6 @@ public:
 	// Lo de la tarea
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
 	class UWeaponTraceComponent* WeaponTraceComp;
+	void SwitchWeapon();
 	
 };

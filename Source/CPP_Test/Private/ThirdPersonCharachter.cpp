@@ -18,6 +18,10 @@ AThirdPersonCharachter::AThirdPersonCharachter()
 	camera->bUsePawnControlRotation = true;
 	swordMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("swordMesh"));
 
+	// Cuchillo
+	knifeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("KnifeMesh"));
+	knifeMesh->SetupAttachment(GetMesh()); 
+	knifeMesh->SetVisibility(false);
 	if (UAnimInstance* animInstance = GetMesh()->GetAnimInstance()) {
 		animInstance->OnMontageEnded.AddDynamic(this, &AThirdPersonCharachter::OnAttackEnded);
 	}
@@ -31,6 +35,8 @@ void AThirdPersonCharachter::BeginPlay()
 	Super::BeginPlay();
 
 	swordMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("swordSocket"));
+	knifeMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("swordSocket"));
+
 }
 
 void AThirdPersonCharachter::Tick(float DeltaTime)
@@ -48,6 +54,8 @@ void AThirdPersonCharachter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	PlayerInputComponent->BindAxis("Right", this, &AThirdPersonCharachter::MoveRight);
 	PlayerInputComponent->BindAxis("LookUp", this, &AThirdPersonCharachter::LookUpCamera);
 	PlayerInputComponent->BindAxis("TurnCamera", this, &AThirdPersonCharachter::TurnCamera);
+	PlayerInputComponent->BindAction("SwitchWeapon", IE_Pressed, this, &AThirdPersonCharachter::SwitchWeapon);
+
 }
 
 void AThirdPersonCharachter::MoveForward(float inputValue)
@@ -88,9 +96,11 @@ void AThirdPersonCharachter::StartAttack()
 
 void AThirdPersonCharachter::LineTrace()
 {
+
 	if (WeaponTraceComp && swordMesh)
 	{
-		WeaponTraceComp->PerformWeaponTrace(swordMesh, FName("Start"), FName("End"), Damage);
+		UStaticMeshComponent* CurrentWeapon = bUsingSword ? swordMesh : knifeMesh;
+		WeaponTraceComp->PerformWeaponTrace(CurrentWeapon, FName("Start"), FName("End"), Damage);
 	}
 }
 
@@ -115,5 +125,12 @@ void AThirdPersonCharachter::SetupStimulusSource()
 void AThirdPersonCharachter::ResetAttackState()
 {
 	isAttacking = false;
+}
+
+void AThirdPersonCharachter::SwitchWeapon()
+{
+	bUsingSword = !bUsingSword;
+	swordMesh->SetVisibility(bUsingSword);
+	knifeMesh->SetVisibility(!bUsingSword);
 }
 
