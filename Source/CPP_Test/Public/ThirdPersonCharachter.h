@@ -53,9 +53,15 @@ public:
 
 	FTimerHandle AttackResetHandle;
 
-	private:
+private:
 	class UAIPerceptionStimuliSourceComponent* StimulusSource;
 	void SetupStimulusSource();
 	
 	void ResetAttackState();
+
+public:
+	// Lo de la tarea
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
+	class UWeaponTraceComponent* WeaponTraceComp;
+	
 };

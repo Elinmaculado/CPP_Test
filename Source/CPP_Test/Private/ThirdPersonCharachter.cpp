@@ -4,6 +4,7 @@
 #include "ThirdPersonCharachter.h"
 
 #include "HealthComponent.h"
+#include "WeaponTraceComponent.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
 
@@ -20,6 +21,9 @@ AThirdPersonCharachter::AThirdPersonCharachter()
 	if (UAnimInstance* animInstance = GetMesh()->GetAnimInstance()) {
 		animInstance->OnMontageEnded.AddDynamic(this, &AThirdPersonCharachter::OnAttackEnded);
 	}
+
+	WeaponTraceComp = CreateDefaultSubobject<UWeaponTraceComponent>(TEXT("WeaponTraceComp"));
+
 }
 
 void AThirdPersonCharachter::BeginPlay()
@@ -84,25 +88,12 @@ void AThirdPersonCharachter::StartAttack()
 
 void AThirdPersonCharachter::LineTrace()
 {
-	FVector starLocation = swordMesh->GetSocketLocation(FName("Start"));
-	FVector endLocation = swordMesh->GetSocketLocation(FName("End"));
-
-	FHitResult hitResult;
-	FCollisionQueryParams traceParams;
-	traceParams.AddIgnoredActor(this);
-	GetWorld()->LineTraceSingleByChannel(hitResult, starLocation, endLocation, ECC_Visibility, traceParams);
-	DrawDebugLine(GetWorld(), starLocation, endLocation, FColor::Red, false, 1, 0, 1);
-
-	if (hitResult.bBlockingHit)
+	if (WeaponTraceComp && swordMesh)
 	{
-		AActor* hitActor = hitResult.GetActor();
-		UHealthComponent* enemyHit = hitActor->FindComponentByClass<UHealthComponent>();
-		if (IsValid(hitActor))
-		{
-			enemyHit->TakeDamage(Damage);
-		}
+		WeaponTraceComp->PerformWeaponTrace(swordMesh, FName("Start"), FName("End"), Damage);
 	}
 }
+
 
 void AThirdPersonCharachter::OnAttackEnded(UAnimMontage* Montage, bool bInterrupted)
 {
