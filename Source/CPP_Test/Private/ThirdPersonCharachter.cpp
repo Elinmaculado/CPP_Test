@@ -1,48 +1,47 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Camera/CameraComponent.h"
 #include "ThirdPersonCharachter.h"
-
-#include "HealthComponent.h"
 #include "WeaponTraceComponent.h"
+#include "HealthComponent.h"
 #include "Perception/AIPerceptionStimuliSourceComponent.h"
 #include "Perception/AISense_Sight.h"
+#include "TimerManager.h"
 
 AThirdPersonCharachter::AThirdPersonCharachter()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
-	//Camera set up
+	// Cámara
 	camera = CreateDefaultSubobject<UCameraComponent>(TEXT("PlayerCamera"));
 	camera->SetupAttachment(RootComponent);
 	camera->bUsePawnControlRotation = true;
-	swordMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("swordMesh"));
 
-	// Cuchillo
+	// Armas
+	swordMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("SwordMesh"));
 	knifeMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("KnifeMesh"));
 	knifeMesh->SetupAttachment(GetMesh()); 
-	knifeMesh->SetVisibility(false);
-	if (UAnimInstance* animInstance = GetMesh()->GetAnimInstance()) {
-		animInstance->OnMontageEnded.AddDynamic(this, &AThirdPersonCharachter::OnAttackEnded);
-	}
+	knifeMesh->SetVisibility(false); // empieza invisible
 
+	// Componente de trace
 	WeaponTraceComp = CreateDefaultSubobject<UWeaponTraceComponent>(TEXT("WeaponTraceComp"));
-
 }
 
 void AThirdPersonCharachter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Montar ambas armas en el mismo socket
 	swordMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("swordSocket"));
 	knifeMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("swordSocket"));
 
+	// Bind de los montages
+	if (UAnimInstance* animInstance = GetMesh()->GetAnimInstance()) {
+		animInstance->OnMontageEnded.AddDynamic(this, &AThirdPersonCharachter::OnMontageEnded);
+	}
 }
 
 void AThirdPersonCharachter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 void AThirdPersonCharachter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -50,24 +49,21 @@ void AThirdPersonCharachter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &AThirdPersonCharachter::Jump);
 	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &AThirdPersonCharachter::StartAttack);
+	PlayerInputComponent->BindAction("SwitchWeapon", IE_Pressed, this, &AThirdPersonCharachter::SwitchWeapon);
 	PlayerInputComponent->BindAxis("Forward", this, &AThirdPersonCharachter::MoveForward);
 	PlayerInputComponent->BindAxis("Right", this, &AThirdPersonCharachter::MoveRight);
 	PlayerInputComponent->BindAxis("LookUp", this, &AThirdPersonCharachter::LookUpCamera);
 	PlayerInputComponent->BindAxis("TurnCamera", this, &AThirdPersonCharachter::TurnCamera);
-	PlayerInputComponent->BindAction("SwitchWeapon", IE_Pressed, this, &AThirdPersonCharachter::SwitchWeapon);
-
 }
 
 void AThirdPersonCharachter::MoveForward(float inputValue)
 {
-	FVector forwardDirection = GetActorForwardVector();
-	AddMovementInput(forwardDirection, inputValue);
+	AddMovementInput(GetActorForwardVector(), inputValue);
 }
 
 void AThirdPersonCharachter::MoveRight(float inputValue)
 {
-	FVector rightDirection = GetActorRightVector();
-	AddMovementInput(rightDirection, inputValue);
+	AddMovementInput(GetActorRightVector(), inputValue);
 }
 
 void AThirdPersonCharachter::TurnCamera(float inputValue)
@@ -82,7 +78,7 @@ void AThirdPersonCharachter::LookUpCamera(float inputValue)
 
 void AThirdPersonCharachter::StartAttack()
 {
-	if (attackMontage && !isAttacking) 
+	if (attackMontage && !isAttacking && !bIsSwitchingWeapon) 
 	{
 		UAnimInstance* animInstance = GetMesh()->GetAnimInstance();
 		if (animInstance) {
@@ -96,19 +92,10 @@ void AThirdPersonCharachter::StartAttack()
 
 void AThirdPersonCharachter::LineTrace()
 {
-
-	if (WeaponTraceComp && swordMesh)
+	if (WeaponTraceComp)
 	{
 		UStaticMeshComponent* CurrentWeapon = bUsingSword ? swordMesh : knifeMesh;
 		WeaponTraceComp->PerformWeaponTrace(CurrentWeapon, FName("Start"), FName("End"), Damage);
-	}
-}
-
-
-void AThirdPersonCharachter::OnAttackEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-	if (Montage == attackMontage) {
-		isAttacking = false;
 	}
 }
 
@@ -117,7 +104,7 @@ void AThirdPersonCharachter::SetupStimulusSource()
 	StimulusSource = CreateDefaultSubobject<UAIPerceptionStimuliSourceComponent>(TEXT("Stimulus"));
 	if (StimulusSource)
 	{
-		StimulusSource->RegisterForSense(TSubclassOf<UAISense_Sight>());
+		StimulusSource->RegisterForSense(UAISense_Sight::StaticClass());
 		StimulusSource->RegisterWithPerceptionSystem();
 	}
 }
@@ -129,8 +116,35 @@ void AThirdPersonCharachter::ResetAttackState()
 
 void AThirdPersonCharachter::SwitchWeapon()
 {
-	bUsingSword = !bUsingSword;
-	swordMesh->SetVisibility(bUsingSword);
-	knifeMesh->SetVisibility(!bUsingSword);
+	if (bIsSwitchingWeapon || isAttacking) return;
+	PlaySwitchWeaponAnimation();
 }
 
+void AThirdPersonCharachter::PlaySwitchWeaponAnimation()
+{
+	if (switchWeaponMontage && !bIsSwitchingWeapon && !isAttacking)
+	{
+		UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+		if (AnimInstance)
+		{
+			bIsSwitchingWeapon = true;
+			AnimInstance->Montage_Play(switchWeaponMontage);
+		}
+	}
+}
+
+void AThirdPersonCharachter::OnMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (Montage == attackMontage)
+	{
+		isAttacking = false;
+	}
+	else if (Montage == switchWeaponMontage)
+	{
+		// Aquí hacemos el cambio real de arma al terminar la animación
+		bUsingSword = !bUsingSword;
+		swordMesh->SetVisibility(bUsingSword);
+		knifeMesh->SetVisibility(!bUsingSword);
+		bIsSwitchingWeapon = false;
+	}
+}

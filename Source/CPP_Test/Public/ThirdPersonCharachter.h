@@ -1,10 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-class UAnimMontage;
 #include "ThirdPersonCharachter.generated.h"
 
 UCLASS()
@@ -13,64 +10,68 @@ class CPP_TEST_API AThirdPersonCharachter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	AThirdPersonCharachter();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	// Cámara
 	UPROPERTY(EditAnywhere)
 	class UCameraComponent* camera;
 
-
 public:	
 	virtual void Tick(float DeltaTime) override;
-
-
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	// Movimiento
 	void MoveForward(float inputValue);
 	void MoveRight(float inputValue);
 	void TurnCamera(float inputValue);
 	void LookUpCamera(float inputValue);
+
+	// Combate
 	void StartAttack();
 	UFUNCTION(BlueprintCallable)
 	void LineTrace();
+	void ResetAttackState();
 
-
-
+	// Armas
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* swordMesh;
 
-	// Mesh del cuchillo
 	UPROPERTY(VisibleAnywhere)
 	class UStaticMeshComponent* knifeMesh;
 
-	// Bandera para saber qué arma está activa
-	UPROPERTY(EditAnywhere, Category="Combat")
-	bool bUsingSword = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
 	UAnimMontage* attackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
+	UAnimMontage* switchWeaponMontage;
+
 	UPROPERTY(BlueprintReadWrite)
 	bool isAttacking = false;
-	void OnAttackEnded(UAnimMontage* Montage, bool bInterrupted);
 
 	UPROPERTY(EditAnywhere)
 	int Damage;
 
 	FTimerHandle AttackResetHandle;
 
+	// Alternar arma
+	void SwitchWeapon();
+	void PlaySwitchWeaponAnimation();
+	UPROPERTY(EditAnywhere, Category="Combat")
+	bool bUsingSword = true; // true = espada, false = cuchillo
+	bool bIsSwitchingWeapon = false;
+
+	// Callback para todos los montages
+	UFUNCTION()
+	void OnMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
 private:
 	class UAIPerceptionStimuliSourceComponent* StimulusSource;
 	void SetupStimulusSource();
-	
-	void ResetAttackState();
 
-public:
-	// Lo de la tarea
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat")
+	// Componente para el trace
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	class UWeaponTraceComponent* WeaponTraceComp;
-	void SwitchWeapon();
-	
 };
